@@ -113,7 +113,7 @@ for param in params:
 
 #############################################################################
 # model build
-# 在卷积层后，在激活函数前。
+# 批量归一化层位置在卷积层后，在激活函数前。
 def net(X, is_training=False, verbose=False):
     X = X.as_in_context(W1.context)
     # 第一层卷积
