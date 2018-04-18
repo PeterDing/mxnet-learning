@@ -21,6 +21,8 @@ import utils
 # 这样在梯度反传时，最上层梯度可以直接跳过中间层传到最下层，从而避免最下层梯度过小情况。
 # }}  -->  为什么?
 
+# ResNet使用跨层通道使得训练非常深的卷积神经网络成为可能。
+# 同样它使用很简单的卷积层配置，使得其拓展更加简单。
 
 class Residual(nn.Block):
     def __init__(self, channels, same_shape=True, **kwargs):
