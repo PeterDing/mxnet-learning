@@ -7,6 +7,9 @@ from mxnet import gluon
 from mxnet import init
 import utils
 
+## mxnet 有自己的实现
+## mxnet/gluon/model_zoo/vision/inception.py
+
 
 # Inception block, http://zh.gluon.ai/_images/inception.svg
 # 注意，nn.Conv2D 的 dilation 默认是 (1, 1)，
