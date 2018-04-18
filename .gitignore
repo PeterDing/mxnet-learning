@@ -18,3 +18,5 @@ dump*.out
 
 # other
 .ropeproject/
+
+/tags
