@@ -1,7 +1,11 @@
+# AlexNet
+# @paper https://papers.nips.cc/paper/4824-imagenet-classification-with-deep-convolutional-neural-networks.pdf
+
 from mxnet.gluon import nn
 from mxnet import init
 from mxnet import gluon
 import utils
+
 
 ctx = utils.try_gpu()
 
