@@ -20,3 +20,5 @@ dump*.out
 .ropeproject/
 
 /tags
+
+.DS_Store
