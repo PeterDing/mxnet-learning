@@ -1,9 +1,10 @@
+# VGG 
+# @paper https://arxiv.org/abs/1409.1556
+
 from mxnet.gluon import nn
 from mxnet import gluon
 from mxnet import init
 import utils
-
-# @paper https://arxiv.org/pdf/1409.1556.pdf
 
 # 多个 conv layers 加一个 Pooling
 def vgg_block(num_convs, channels):
