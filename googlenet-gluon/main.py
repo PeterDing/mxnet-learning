@@ -1,4 +1,4 @@
-# GoogLeNet
+# GoogLeNet V1
 # @paper https://arxiv.org/abs/1409.4842
 
 from mxnet.gluon import nn
