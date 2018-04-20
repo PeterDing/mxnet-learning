@@ -1,3 +1,7 @@
+# Batch Normalization
+# @paper https://arxiv.org/abs/1502.03167
+# 由2015年 Sergey Ioffe, Christian Szegedy 提出
+
 from mxnet import nd
 from mxnet import autograd
 from mxnet import gluon
@@ -10,6 +14,7 @@ ctx
 # 一般统一划归
 # 在实际应用中，我们通常将输入数据的每个样本或者每个特征进行归一化，
 # 就是将均值变为0方差变为1，来使得数值更稳定。
+# TODO, 数学解释
 def pure_batch_norm(X, gamma, beta, eps=1e-5):
     assert len(X.shape) in (2, 4)
     # 全连接: batch_size x feature
