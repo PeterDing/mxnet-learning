@@ -45,6 +45,7 @@ class Residual(nn.Block):
         return nd.relu(out + x)
 
 
+# ResNet 18
 class ResNet(nn.Block):
     def __init__(self, num_classes, verbose=False, **kwargs):
         super(ResNet, self).__init__(**kwargs)
