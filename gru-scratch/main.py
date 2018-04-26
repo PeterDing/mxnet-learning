@@ -20,6 +20,7 @@
 
 # 重置门有助于捕捉时序数据中短期的依赖关系。
 # 更新门有助于捕捉时序数据中长期的依赖关系。
+# 怎么做的??? 数学解释是什么???
 
 import zipfile
 from mxnet import nd
@@ -27,10 +28,10 @@ import utils
 
 ctx = utils.try_gpu()
 
-with zipfile.ZipFile('../data/jaychou_lyrics.txt.zip', 'r') as zin:
-    zin.extractall('../data/')
+with zipfile.ZipFile('data/jaychou_lyrics.txt.zip', 'r') as zin:
+    zin.extractall('data/')
 
-with open('../data/jaychou_lyrics.txt') as f:
+with open('data/jaychou_lyrics.txt') as f:
     corpus_chars = f.read()
 
 corpus_chars = corpus_chars.replace('\n', ' ').replace('\r', ' ')
