@@ -19,6 +19,7 @@ from mxnet import gluon
 from mxnet import image
 from mxnet import nd
 from mxnet import init
+from mxnet.gluon import nn
 from mxnet.gluon.model_zoo import vision as models
 import numpy as np
 
@@ -26,8 +27,7 @@ import utils
 
 data_root = '../data'
 voc_root = data_root + '/VOCdevkit/VOC2012'
-url = ('http://host.robots.ox.ac.uk/pascal/VOC/voc2012'
-       '/VOCtrainval_11-May-2012.tar')
+url = ('http://host.robots.ox.ac.uk/pascal/VOC/voc2012' '/VOCtrainval_11-May-2012.tar')
 sha1 = '4e443f8a2eca6b1dac8a6c57641b67dd40621a49'
 
 if os.path.exists(voc_root):
@@ -40,8 +40,7 @@ if os.path.exists(voc_root):
 
 
 def read_images(root=voc_root, train=True):
-    txt_fname = root + '/ImageSets/Segmentation/' + ('train.txt'
-                                                     if train else 'val.txt')
+    txt_fname = root + '/ImageSets/Segmentation/' + ('train.txt' if train else 'val.txt')
     with open(txt_fname, 'r') as f:
         images = f.read().split()
     n = len(images)
@@ -67,27 +66,34 @@ def rand_crop(data, label, height, width):
 
 # 接下来我们列出每个物体和背景对应的RGB值
 classes = [
-    'background', 'aeroplane', 'bicycle', 'bird', 'boat', 'bottle', 'bus',
-    'car', 'cat', 'chair', 'cow', 'diningtable', 'dog', 'horse', 'motorbike',
-    'person', 'potted plant', 'sheep', 'sofa', 'train', 'tv/monitor'
+    'background', 'aeroplane', 'bicycle', 'bird', 'boat', 'bottle', 'bus', 'car', 'cat',
+    'chair', 'cow', 'diningtable', 'dog', 'horse', 'motorbike', 'person', 'potted plant',
+    'sheep', 'sofa', 'train', 'tv/monitor'
 ]
 # RGB color for each class
-colormap = [[0, 0, 0], [128, 0, 0], [0, 128, 0], [128, 128, 0], [0, 0, 128], [
-    128, 0, 128
-], [0, 128, 128], [128, 128, 128], [64, 0, 0], [192, 0, 0], [64, 128, 0],
-            [192, 128, 0], [64, 0, 128], [192, 0, 128], [64, 128,
-                                                         128], [192, 128, 128],
+colormap = [[0, 0, 0], [128, 0, 0], [0, 128, 0], [128, 128, 0], [0, 0, 128], [128, 0, 128],
+            [0, 128, 128], [128, 128, 128], [64, 0, 0], [192, 0, 0], [64, 128, 0],
+            [192, 128, 0], [64, 0, 128], [192, 0, 128], [64, 128, 128], [192, 128, 128],
             [0, 64, 0], [128, 64, 0], [0, 192, 0], [128, 192, 0], [0, 64, 128]]
 
 # 这样给定一个标号图片，我们就可以将每个像素对应的物体标号找出来。
 cm2lbl = np.zeros(256**3)
 for i, cm in enumerate(colormap):
+    # !! 注意，这里 cm2lbl 元素的值域是 [0, len(classes) - 1]
     cm2lbl[(cm[0] * 256 + cm[1]) * 256 + cm[2]] = i
 
 
 def image2label(im):
     data = im.astype('int32').asnumpy()
+    # data[:, :, 0].shape = data.shape[:-1]
     idx = (data[:, :, 0] * 256 + data[:, :, 1]) * 256 + data[:, :, 2]
+
+    # a.shape = (i1, i2, i3, ..., in)
+    # b.shape = (j1, j2, ..., jm)
+    # a[b].shape = [b.shape, a.shape[1:]]
+    # a[b][b.shape:] = a[b[b.shape]]
+    #
+    # 如此，cm2lbl[idx] 中每个像素对应者他的类别序号。
     return nd.array(cm2lbl[idx])
 
 
@@ -103,10 +109,11 @@ def normalize_image(data):
 
 
 class VOCSegDataset(gluon.data.Dataset):
+
     def _filter(self, images):
         return [
-            im for im in images if (im.shape[0] >= self.crop_size[0]
-                                    and im.shape[1] >= self.crop_size[1])
+            im for im in images
+            if (im.shape[0] >= self.crop_size[0] and im.shape[1] >= self.crop_size[1])
         ]
 
     def __init__(self, train, crop_size):
@@ -118,8 +125,7 @@ class VOCSegDataset(gluon.data.Dataset):
         print('Read ' + str(len(self.data)) + ' examples')
 
     def __getitem__(self, idx):
-        data, label = rand_crop(self.data[idx], self.label[idx],
-                                *self.crop_size)
+        data, label = rand_crop(self.data[idx], self.label[idx], *self.crop_size)
         data = data.transpose((2, 0, 1))
         label = image2label(label)
         return data, label
@@ -137,8 +143,7 @@ voc_test = VOCSegDataset(False, input_shape)
 
 # 最后定义批量读取。可以看到跟之前的不同是批量标号不再是一个向量，而是一个三维数组。
 batch_size = 64
-train_data = gluon.data.DataLoader(
-    voc_train, batch_size, shuffle=True, last_batch='discard')
+train_data = gluon.data.DataLoader(voc_train, batch_size, shuffle=True, last_batch='discard')
 test_data = gluon.data.DataLoader(voc_test, batch_size, last_batch='discard')
 
 # 全连接卷积网络
@@ -156,7 +161,9 @@ test_data = gluon.data.DataLoader(voc_test, batch_size, last_batch='discard')
 # 具体来说，我们定义一个卷积转置层（transposed convolutional, 也经常被错误的叫做deconvolutions），
 # 它就是将卷积层的forward和backward函数兑换。
 #
-# 另外一点要注意的是，在最后的卷积层我们同样使用平化层（nn.Flattern）或者（全局）池化层来使得方便使用之后的全连接层作为输出。但是这样会损害空间信息，而这个对语义分割很重要。一个解决办法是去掉不需要的池化层，并将全连接层替换成1×1卷基层。
+# 另外一点要注意的是，在最后的卷积层我们同样使用平化层（nn.Flattern）或者（全局）池化层来使得方便使用之后的全连接层作为输出。
+# 但是这样会损害空间信息，而这个对语义分割很重要。
+# 一个解决办法是去掉不需要的池化层，并将全连接层替换成1×1卷基层。
 #
 # 所以给定一个卷积网络，FCN主要做下面的改动:
 #
@@ -178,8 +185,7 @@ num_classes = len(classes)
 with net.name_scope():
     net.add(
         nn.Conv2D(num_classes, kernel_size=1),
-        nn.Conv2DTranspose(
-            num_classes, kernel_size=64, padding=16, strides=32))
+        nn.Conv2DTranspose(num_classes, kernel_size=64, padding=16, strides=32))
 
 
 # 训练
@@ -194,8 +200,7 @@ def bilinear_kernel(in_channels, out_channels, kernel_size):
     og = np.ogrid[:kernel_size, :kernel_size]
     filt = (1 - abs(og[0] - center) / factor) * \
            (1 - abs(og[1] - center) / factor)
-    weight = np.zeros(
-        (in_channels, out_channels, kernel_size, kernel_size), dtype='float32')
+    weight = np.zeros((in_channels, out_channels, kernel_size, kernel_size), dtype='float32')
     weight[range(in_channels), range(out_channels), :, :] = filt
     return nd.array(weight)
 
@@ -225,7 +230,7 @@ conv_trans = net[-1]
 conv_trans.initialize(init=init.Zero())
 net[-2].initialize(init=init.Xavier())
 
-x = nd.zeros((batch_size, 3, *input_shape))
+x = nd.zeros((batch_size, 3, input_shape[0], input_shape[1]))
 net(x)
 
 shape = conv_trans.weight.data().shape
@@ -241,9 +246,38 @@ loss = gluon.loss.SoftmaxCrossEntropyLoss(axis=1)
 ctx = utils.try_all_gpus()
 net.collect_params().reset_ctx(ctx)
 
-trainer = gluon.Trainer(net.collect_params(), 'sgd', {
-    'learning_rate': .1,
-    'wd': 1e-3
-})
+trainer = gluon.Trainer(net.collect_params(), 'sgd', {'learning_rate': .1, 'wd': 1e-3})
 
 utils.train(train_data, test_data, net, loss, trainer, ctx, num_epochs=10)
+
+
+# 预测
+# 预测函数跟之前的图片分类预测类似，但跟上面一样，主要不同在于我们需要在axis=1上做argmax。
+# 同时我们定义image2label的反函数，它将预测值转成图片。
+def predict(im):
+    data = normalize_image(im)
+    data = data.transpose((2, 0, 1)).expand_dims(axis=0)
+    yhat = net(data.as_in_context(ctx[0]))
+    pred = nd.argmax(yhat, axis=1)
+    return pred.reshape((pred.shape[1], pred.shape[2]))
+
+
+def label2image(pred):
+    # x.shape 是图片的，元素是类别序号。
+    x = pred.astype('int32').asnumpy()
+    cm = nd.array(colormap).astype('uint8')
+    # cm[x].shape = [x.shape, 3]     heigh, weight, column
+    return nd.array(cm[x, :])
+
+
+# 我们读取前几张测试图片并对其进行预测。
+test_images, test_labels = read_images(train=False)
+
+n = 6
+imgs = []
+for i in range(n):
+    x = test_images[i]
+    pred = label2image(predict(x))
+    imgs += [x, pred, test_labels[i]]
+
+# utils.show_images(imgs, nrows=n, ncols=3, figsize=(6,10))
