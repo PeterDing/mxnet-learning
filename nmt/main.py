@@ -1,4 +1,7 @@
 # Neural Machine Translation with Attention
+# @paper https://www.aclweb.org/anthology/D14-1179
+# @paper https://papers.nips.cc/paper/5346-sequence-to-sequence-learning-with-neural-networks.pdf
+# @paper https://arxiv.org/abs/1409.0473
 
 import sys
 import mxnet as mx
