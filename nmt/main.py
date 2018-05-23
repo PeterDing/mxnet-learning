@@ -230,7 +230,8 @@ class DecoderInitState(Block):
     def __init__(self, encoder_hidden_dim, decoder_hidden_dim, **kwargs):
         super(DecoderInitState, self).__init__(**kwargs)
         with self.name_scope():
-            # (batch_size, encoder_hidden_dim) -> (batch_size, decoder_hidden_dim)
+            # (encoder_num_layers, batch_size, encoder_hidden_dim) -> 
+            # (encoder_num_layers, batch_size, decoder_hidden_dim)
             self.dense = nn.Dense(
                 decoder_hidden_dim,
                 in_units=encoder_hidden_dim,
