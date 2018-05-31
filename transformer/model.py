@@ -1,8 +1,13 @@
 # TODO, mask defination
 
+import sys
+import math
+
 import mxnet as mx
 from mxnet import gluon, nd
 from mxnet.gluon import nn
+
+LARGE_NEGATIVE_VALUE = -1e-10
 
 
 def register_children(block, children):
@@ -83,10 +88,12 @@ def dot_attention(query, key, value, mask, dropout=0.0):
     value = value.reshape(-3, -2)
 
     # matmul, t: (batch_size*h, length_q, length_k)
-    t = nd.batch_dot(query, key.swapaxes(1, 2)) / nd.sqrt(nd.array([query.shape[-1]]))
+    t = nd.batch_dot(query, key.swapaxes(1, 2)) / math.sqrt(query.shape[-1])
 
     # masked
-    t = t * mask
+    m = nd.full(t.shape, LARGE_NEGATIVE_VALUE)
+    mask = nd.ones(t.shape) * mask
+    t = nd.where(mask, t, m)
 
     # softmax
     t = nd.softmax(t, axis=-1)
@@ -243,12 +250,13 @@ class Decoder(nn.Block):
             self.norm = nn.LayerNorm()
             self.embedding_position = PositionalEmbedding(
                 vocab_size, model_dim, dropout=dropout)
+            self.generator = Generator(vocab_size)
 
     def forward(self, memory, trg, memory_mask, trg_mask):
         trg = self.embedding_position(trg)
         for layer in self.decoder_layers:
             trg = layer(memory, trg, memory_mask, trg_mask)
-        return self.norm(trg)
+        return self.generator(self.norm(trg))
 
 
 class DecoderLayer(nn.Block):
