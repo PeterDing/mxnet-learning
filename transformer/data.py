@@ -63,7 +63,8 @@ def _load_data(path, limit=None):
         for _ in range(min(limit or MAX_DATA_LEN, MAX_DATA_LEN)):
             line = f.readline().strip()
             if not line.startswith('<'):
-                sentence = line.split()
+                sentence = line.replace(',', ' ,').replace('.', ' .').split()
+                sentence = [w.strip() for w in sentence if w.strip()]
                 data.append(sentence)
                 vocab_set.update(sentence)
     vocab_list = sorted(vocab_set)
