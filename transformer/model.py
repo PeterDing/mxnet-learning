@@ -68,7 +68,6 @@ class PositionalEmbedding(nn.Block):
         return nd.broadcast_axis(out.expand_dims(0), axis=0, size=batch_size)
 
     def forward(self, x):
-        print('----', x)
         x = self.embedding(x) * nd.sqrt(nd.array([self.model_dim]))
         return self.dropout(x + self.positional(x))
 
@@ -129,7 +128,7 @@ class MultiHeadAttention(nn.Block):
         return self.denses[3](out)
 
 
-class EncoderDecoder(nn.Block):
+class Tranformer(nn.Block):
 
     def __init__(self,
                  src_vocab_size,
@@ -186,7 +185,6 @@ class Encoder(nn.Block):
                 vocab_size, model_dim, dropout=dropout)
 
     def forward(self, src, src_mask):
-        print('src', src)
         x = self.embedding_position(src)
         for layer in self.encoder_layers:
             x = layer(x, src_mask)
@@ -219,7 +217,9 @@ class EncoderLayer(nn.Block):
 class Generator(nn.Block):
 
     def __init__(self, vocab_size):
-        self.dense = nn.Dense(vocab_size, flatten=False)
+        super().__init__()
+        with self.name_scope():
+            self.dense = nn.Dense(vocab_size, flatten=False)
 
     def forward(self, pred):
         return self.dense(pred)
@@ -279,7 +279,7 @@ class DecoderLayer(nn.Block):
 
         trg = self.res_norms[0](trg, lambda x: self.self_attention_masked(x, x, x, trg_mask))
         trg = self.res_norms[1](
-            trg, lambda x: self.self_attention_masked(x, memory, memory, memory_mask))
+            trg, lambda x: self.self_attention(x, memory, memory, memory_mask))
         return self.res_norms[2](trg, self.ff)
 
 
@@ -291,7 +291,7 @@ def make_net(src_vocab_size,
              h=8,
              dropout=0.1):
 
-    net = EncoderDecoder(
+    net = Tranformer(
         src_vocab_size,
         trg_vocab_size,
         num_layer=num_layer,
