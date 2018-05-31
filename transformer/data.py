@@ -10,7 +10,7 @@ from mxnet.gluon import data as gdata
 
 from constants import BOS, EOS, PAD
 
-MAX_DATA_LEN = 10000
+MAX_DATA_LEN = 1000000
 
 
 def sequence_mask(size):
@@ -39,6 +39,7 @@ def make_vocab(vocab_list):
 def _transform(src, trg, s_bos, s_eos, s_pad, t_bos, t_eos, t_pad):
     src = list(src)
     trg = list(trg)
+
     # add eos to src end
     src.append(s_eos)
 
@@ -49,8 +50,8 @@ def _transform(src, trg, s_bos, s_eos, s_pad, t_bos, t_eos, t_pad):
     trg_y = list(trg[1:])
     trg_y.append(t_eos)
 
-    x = (src, trg)
-    y = trg_y
+    x = (nd.array(src), nd.array(trg))
+    y = nd.array(trg_y)
 
     return x, y
 
@@ -85,11 +86,14 @@ def make_dataset(src_data, trg_data, src_vocab, trg_vocab):
     return dataset
 
 
-def load_data(root_dir, src_lang, trg_lang, limit=None, batch_size=1):
+def load_data(root_dir, src_lang, trg_lang, limit=None, batch_size=1, shuffle=False):
     src_vocab, src_data = _load_data(
-        os.path.join(root_dir, 'train.tags.{0}-{1}.{0}'.format(src_lang, trg_lang)), limit=limit)
+        os.path.join(root_dir, 'train.tags.{0}-{1}.{0}'.format(src_lang, trg_lang)),
+        limit=limit)
     trg_vocab, trg_data = _load_data(
-        os.path.join(root_dir, 'train.tags.{0}-{1}.{1}'.format(src_lang, trg_lang)), limit=limit)
+        os.path.join(root_dir, 'train.tags.{0}-{1}.{1}'.format(src_lang, trg_lang)),
+        limit=limit)
+
     dataset = make_dataset(src_data, trg_data, src_vocab, trg_vocab)
-    train = gdata.DataLoader(dataset, batch_size=batch_size)
-    return train, src_vocab, trg_vocab
+    data_iter = gdata.DataLoader(dataset, batch_size=batch_size, shuffle=shuffle)
+    return data_iter, src_vocab, trg_vocab
