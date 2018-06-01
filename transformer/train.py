@@ -3,9 +3,31 @@ from mxnet.gluon import loss as gloss
 from mxnet import lr_scheduler
 
 
+# with Label smoothing
+# https://arxiv.org/abs/1512.00567
+def get_loss(pred, label, trg_vocab_size, trg_pad, epsilon=0.1):
+    labelprob = nd.one_hot(label, trg_vocab_size)
+
+    # Label smoothing
+    smoothed_labelprob = (1 - epsilon) * labelprob + epsilon / trg_vocab_size
+
+    logprob = nd.log_softmax(pred)
+
+    loss = -nd.sum(logprob * smoothed_labelprob, axis=-1, keepdims=False)
+
+    # mask PAD
+    mask = label != trg_pad
+    loss = loss * mask
+
+    # batch_axis = 0
+    loss = nd.mean(loss, axis=0, exclude=True)
+
+    return loss
+
+
 # smoothed cross_entropy
 # https://github.com/awslabs/sockeye/blob/master/sockeye/loss.py#L153
-def get_loss(pred, label, num_classes, trg_pad, smooth_alpha=0.1):
+def get_smoothed_loss(pred, label, num_classes, trg_pad, smooth_alpha=0.1):
     pred = nd.maximum(pred, 1e-10)
     logprob = nd.log_softmax(pred)
 
