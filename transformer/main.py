@@ -11,11 +11,11 @@ from translate import translate
 ctx = mxnet.cpu()
 
 # hyper params
-epoch = 100
+epoch = 200
+limit = 10
 data_dir = '../data/iwslt16/de-en'
 src_lang = 'de'
 trg_lang = 'en'
-limit = 10
 batch_size = 1
 
 # for net
@@ -30,10 +30,10 @@ learning_rate = model_dim**-0.5
 beta1 = 0.9
 beta2 = 0.98
 epsilon = 1e-9
-warmup_steps = 30  # 4000
+warmup_steps = 20  # 4000
 
 # for loss
-smooth_alpha = 0.1
+loss_epsilon = 0.1
 
 data_iter, src_vocab, trg_vocab = load_data(
     data_dir, src_lang, trg_lang, limit=limit, batch_size=1, shuffle=True)
@@ -41,10 +41,12 @@ s_pad = src_vocab.to_indices(PAD)
 t_bos = trg_vocab.to_indices(BOS)
 t_eos = trg_vocab.to_indices(EOS)
 t_pad = trg_vocab.to_indices(PAD)
-num_classes = len(trg_vocab)
+trg_vocab_size = len(trg_vocab)
 
-
-xxx = ['Wir', 'werden', 'Ihnen', 'einige', 'Geschichten', 'über', 'das', 'Meer', 'in', 'Videoform', 'erzählen', '.']
+xxx = [
+    'Wir', 'werden', 'Ihnen', 'einige', 'Geschichten', 'über', 'das', 'Meer', 'in',
+    'Videoform', 'erzählen', '.'
+]
 yyy = "And we're going to tell you some stories from the sea here in video."
 xxx_src = nd.array(src_vocab.to_indices(xxx)).expand_dims(0)
 
@@ -74,13 +76,15 @@ def train(net):
 
             with autograd.record():
                 pred = net(src, trg, src_mask, trg_mask)
-                loss = get_loss(pred, trg_y, num_classes, t_pad, smooth_alpha=smooth_alpha)
+                loss = get_loss(pred, trg_y, trg_vocab_size, t_pad, epsilon=loss_epsilon)
             loss.backward()
             net_trainer.step(1)
             tloss += loss.asscalar()
-        print('epoch: {}, loss: {}'.format(i, tloss))
-        print(' '.join(translate(net, xxx_src, trg_vocab, s_pad, t_bos, t_eos, t_pad)))
-        print(yyy)
+
+        if i % 10 == 0:
+            print('epoch: {}, loss: {}'.format(i, tloss))
+            print(' '.join(translate(net, xxx_src, trg_vocab, s_pad, t_bos, t_eos, t_pad)))
+            print(yyy)
 
 
 def main():
