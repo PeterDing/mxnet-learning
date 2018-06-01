@@ -91,6 +91,7 @@ def dot_attention(query, key, value, mask, dropout=0.0):
     t = nd.batch_dot(query, key.swapaxes(1, 2)) / math.sqrt(query.shape[-1])
 
     # masked
+    # mask PAD and future words
     m = nd.full(t.shape, LARGE_NEGATIVE_VALUE)
     mask = nd.ones(t.shape) * mask
     t = nd.where(mask, t, m)
@@ -100,6 +101,7 @@ def dot_attention(query, key, value, mask, dropout=0.0):
     if dropout > 0.0:
         t = nd.dropout(t, p=dropout)
 
+    # (batch_size, h, length_q, model_dim/h)
     return nd.batch_dot(t, value).reshape(query_shape)
 
 
@@ -111,7 +113,9 @@ class MultiHeadAttention(nn.Block):
         self.model_dim = model_dim
 
         with self.name_scope():
-            self.denses = [nn.Dense(model_dim, flatten=False) for _ in range(4)]
+            self.denses = [
+                nn.Dense(model_dim, activation='relu', flatten=False) for _ in range(4)
+            ]
             register_children(self, self.denses)
 
     def forward(self, query, key, value, mask):
@@ -128,9 +132,11 @@ class MultiHeadAttention(nn.Block):
         value = self.denses[2](value).reshape(0, 0, self.h, -1).swapaxes(1, 2)
 
         # h - attention
+        # (batch_size, h, length_q, model_dim/h)
         out = dot_attention(query, key, value, mask)
 
         # concat
+        # (batch_size, length_q, model_dim)
         out = out.reshape(query_shape)
         return self.denses[3](out)
 
@@ -167,9 +173,12 @@ class Tranformer(nn.Block):
                 ff_dim=ff_dim,
                 dropout=dropout)
 
+            self.generator = Generator(trg_vocab_size)
+
     def forward(self, src, trg, src_mask, trg_mask):
         memory = self.encoder(src, src_mask)
-        return self.decoder(memory, trg, src_mask, trg_mask)
+        out = self.decoder(memory, trg, src_mask, trg_mask)
+        return self.generator(out)
 
 
 class Encoder(nn.Block):
@@ -188,11 +197,11 @@ class Encoder(nn.Block):
             ]
             register_children(self, self.encoder_layers)
             self.norm = nn.LayerNorm()
-            self.embedding_position = PositionalEmbedding(
+            self.positional_embedding = PositionalEmbedding(
                 vocab_size, model_dim, dropout=dropout)
 
     def forward(self, src, src_mask):
-        x = self.embedding_position(src)
+        x = self.positional_embedding(src)
         for layer in self.encoder_layers:
             x = layer(x, src_mask)
         return self.norm(x)
@@ -248,15 +257,14 @@ class Decoder(nn.Block):
             ]
             register_children(self, self.decoder_layers)
             self.norm = nn.LayerNorm()
-            self.embedding_position = PositionalEmbedding(
+            self.positional_embedding = PositionalEmbedding(
                 vocab_size, model_dim, dropout=dropout)
-            self.generator = Generator(vocab_size)
 
     def forward(self, memory, trg, memory_mask, trg_mask):
-        trg = self.embedding_position(trg)
+        trg = self.positional_embedding(trg)
         for layer in self.decoder_layers:
             trg = layer(memory, trg, memory_mask, trg_mask)
-        return self.generator(self.norm(trg))
+        return self.norm(trg)
 
 
 class DecoderLayer(nn.Block):
@@ -286,8 +294,8 @@ class DecoderLayer(nn.Block):
         #  return trg
 
         trg = self.res_norms[0](trg, lambda x: self.self_attention_masked(x, x, x, trg_mask))
-        trg = self.res_norms[1](
-            trg, lambda x: self.self_attention(x, memory, memory, memory_mask))
+        trg = self.res_norms[1](trg,
+                                lambda x: self.self_attention(x, memory, memory, memory_mask))
         return self.res_norms[2](trg, self.ff)
 
 
