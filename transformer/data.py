@@ -62,6 +62,9 @@ def _load_data(path, limit=None):
     with open(path) as f:
         for _ in range(min(limit or MAX_DATA_LEN, MAX_DATA_LEN)):
             line = f.readline().strip()
+            if not line:
+                break
+
             if not line.startswith('<'):
                 sentence = line.replace(',', ' ,').replace('.', ' .').split()
                 sentence = [w.strip() for w in sentence if w.strip()]
