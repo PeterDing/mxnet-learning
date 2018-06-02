@@ -164,6 +164,7 @@ class Tranformer(nn.Block):
                 num_layer=num_layer,
                 model_dim=model_dim,
                 ff_dim=ff_dim,
+                h=h,
                 dropout=dropout)
 
             self.decoder = Decoder(
@@ -171,6 +172,7 @@ class Tranformer(nn.Block):
                 num_layer=num_layer,
                 model_dim=model_dim,
                 ff_dim=ff_dim,
+                h=h,
                 dropout=dropout)
 
             self.generator = Generator(trg_vocab_size)
