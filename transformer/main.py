@@ -1,28 +1,32 @@
-from mxnet import gluon, autograd, nd
+import os
+
 import mxnet
+import numpy as np
+from mxnet import autograd, gluon, log, nd
 
 from constants import BOS, EOS, PAD
 from data import load_data, make_src_mask, make_trg_mask
-from model import make_net, Generator
+from model import make_net
 from train import ReduceLRScheduler, get_loss
-import numpy as np
 from translate import translate
+
+logger = log.get_logger(name='transformer', filename='working/log.log', level=log.INFO)
 
 ctx = mxnet.cpu()
 
 # hyper params
 epoch = 200
-limit = 10
+limit = 30
 data_dir = '../data/iwslt16/de-en'
 src_lang = 'de'
 trg_lang = 'en'
 batch_size = 1
 
 # for net
-num_layer = 6
-model_dim = 512
-h = 8
-ff_dim = 2048
+num_layer = 6  # 6
+model_dim = 300  # 512
+h = 6   # 8
+ff_dim = 1024  # 2048
 dropout = 0.1
 
 # for adam
@@ -30,13 +34,18 @@ learning_rate = model_dim**-0.5
 beta1 = 0.9
 beta2 = 0.98
 epsilon = 1e-9
-warmup_steps = 20  # 4000
+warmup_steps = 4000  # 4000
 
 # for loss
 loss_epsilon = 0.1
 
+# vocab
+src_vocab_path = 'src_vocab.nd'
+trg_vocab_path = 'trg_vocab.nd'
+
 data_iter, src_vocab, trg_vocab = load_data(
     data_dir, src_lang, trg_lang, limit=limit, batch_size=1, shuffle=True)
+
 s_pad = src_vocab.to_indices(PAD)
 t_bos = trg_vocab.to_indices(BOS)
 t_eos = trg_vocab.to_indices(EOS)
@@ -81,10 +90,13 @@ def train(net):
             net_trainer.step(1)
             tloss += loss.asscalar()
 
-        if i % 10 == 0:
-            print('epoch: {}, loss: {}'.format(i, tloss))
-            print(' '.join(translate(net, xxx_src, trg_vocab, s_pad, t_bos, t_eos, t_pad)))
-            print(yyy)
+        logger.info('{} {}'.format(i, tloss))
+        if i % 200 == 0:
+            net_path = 'working/net-{}.params'.format(i)
+            net.save_params(net_path)
+            #  print('epoch: {}, loss: {}'.format(i, tloss))
+            #  print(' '.join(translate(net, xxx_src, trg_vocab, s_pad, t_bos, t_eos, t_pad)))
+            #  print(yyy)
 
 
 def main():
