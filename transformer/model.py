@@ -1,4 +1,5 @@
-# TODO, mask defination
+# Transformer - Implement of "Attention Is All You Need"
+# @paper https://arxiv.org/abs/1706.03762
 
 import sys
 import math
