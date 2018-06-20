@@ -35,6 +35,7 @@ def pure_batch_norm(X, gamma, beta, eps=1e-5):
 
 
 # 批量归一化
+# X = \gamma \times \frac{X - mean(X)}{\sqrt{(X - mean(X))^2 + \epsilon}} + \beta
 def batch_norm(X,
                gamma,
                beta,
